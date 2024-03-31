@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -78,6 +78,29 @@ async function run() {
         });
       }
     });
+
+    // patch and update methods / api end points 
+    app.put("/task-quest/update-task/:id", async(req,res)=>{
+      try {
+        const id = req.params.id;
+        const updatedTaskInfo = req.body;
+        const acknowledge = await taskCollection.updateOne({_id: new ObjectId(id)},{$set: {...updatedTaskInfo}},{upsert:false})
+
+        console.log(acknowledge);
+
+        res.status(201).json({
+          status: true,
+          message: "Task updated successfully",
+          acknowledge,
+        });
+
+      } catch (err) {
+        res.status(500).json({
+          status: false,
+          message: `Internal server error ${err.message}`,
+        });
+      }
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
