@@ -35,23 +35,27 @@ async function run() {
     app.get("/task-quest/get-all/:email", async (req, res) => {
       try {
         const userEmail = req.params.email;
-        const tasks = await taskCollection.find({ userEmail: userEmail }).toArray();
-        
-        // lets separate task in todo, ongoing, and completed 
-        let todo = [],ongoing = [],completed = [];
-        tasks.forEach(task =>{
-          if(task?.status === "todo"){
-            todo.push(task)
-          }else if(task?.status === "ongoing"){
-            ongoing.push(task)
-          }else{
-            completed.push(task)
+        const tasks = await taskCollection
+          .find({ userEmail: userEmail })
+          .toArray();
+
+        // lets separate task in todo, ongoing, and completed
+        let todo = [],
+          ongoing = [],
+          completed = [];
+        tasks.forEach((task) => {
+          if (task?.status === "todo") {
+            todo.push(task);
+          } else if (task?.status === "ongoing") {
+            ongoing.push(task);
+          } else {
+            completed.push(task);
           }
-        })
+        });
         res.status(200).json({
           status: true,
           message: "Task gotten successfully",
-          tasks:{todo,ongoing,completed},
+          tasks: { todo, ongoing, completed },
         });
       } catch (err) {
         res.status(500).json({
@@ -79,28 +83,68 @@ async function run() {
       }
     });
 
-    // patch and update methods / api end points 
-    app.put("/task-quest/update-task/:id", async(req,res)=>{
+    // put, patch, and delete methods / api end points
+    // update task 
+    app.put("/task-quest/update-task/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const updatedTaskInfo = req.body;
-        const acknowledge = await taskCollection.updateOne({_id: new ObjectId(id)},{$set: {...updatedTaskInfo}},{upsert:false})
-
-        console.log(acknowledge);
-
+        const acknowledge = await taskCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { ...updatedTaskInfo } },
+          { upsert: false }
+        );
         res.status(201).json({
           status: true,
           message: "Task updated successfully",
           acknowledge,
         });
-
       } catch (err) {
         res.status(500).json({
           status: false,
           message: `Internal server error ${err.message}`,
         });
       }
-    })
+    });
+
+    // update task status
+    app.patch("/task-quest/update-task-status/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const {status} = req.body;
+        const acknowledge = await taskCollection.updateOne({_id: new ObjectId(id)},{$set:{status:status}})
+        res.status(201).json({
+          status: true,
+          message: "Task status updated successfully",
+          acknowledge,
+        });
+      } catch (err) {
+        res.status(500).json({
+          status: false,
+          message: `Internal server error ${err.message}`,
+        });
+      }
+    });
+    // delete task 
+    app.delete("/task-quest/delete-task/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const acknowledge = await taskCollection.deleteOne({_id: new ObjectId(id)})
+        res.status(201).json({
+          status: true,
+          message: "Task deleted successfully",
+          acknowledge,
+        });
+      } catch (err) {
+        res.status(500).json({
+          status: false,
+          message: `Internal server error ${err.message}`,
+        });
+      }
+    });
+
+    
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
