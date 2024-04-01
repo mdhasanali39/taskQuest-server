@@ -35,28 +35,138 @@ async function run() {
     app.get("/task-quest/get-all/:email", async (req, res) => {
       try {
         const userEmail = req.params.email;
-        const tasks = await taskCollection
-          .find({ userEmail: userEmail })
-          .toArray();
+        const { pageSize, currentPage, taskStatus } = req.query;
+        const skip = (parseInt(currentPage) - 1) * parseInt(pageSize);
+        let todo, ongoing, completed;
 
-        // lets separate task in todo, ongoing, and completed
-        let todo = [],
-          ongoing = [],
-          completed = [];
-        tasks.forEach((task) => {
-          if (task?.status === "todo") {
-            todo.push(task);
-          } else if (task?.status === "ongoing") {
-            ongoing.push(task);
-          } else {
-            completed.push(task);
-          }
+        // lets get total task for todo, ongoing, and completed
+        const totalTodoTasks = await taskCollection.countDocuments({
+          status: "todo",
         });
-        res.status(200).json({
-          status: true,
-          message: "Task gotten successfully",
-          tasks: { todo, ongoing, completed },
+        const totalOngoingTasks = await taskCollection.countDocuments({
+          status: "ongoing",
         });
+        const totalCompletedTasks = await taskCollection.countDocuments({
+          status: "completed",
+        });
+
+        if(taskStatus){
+          // get todo tasks
+        if (taskStatus === "todo") {
+          todo = await taskCollection
+            .find({ userEmail: userEmail, status: "todo" })
+            .limit(parseInt(pageSize))
+            .skip(skip)
+            .toArray();
+          ongoing = await taskCollection
+            .find({ userEmail: userEmail, status: "ongoing" })
+            .limit(3)
+            .toArray();
+          completed = await taskCollection
+            .find({ userEmail: userEmail, status: "completed" })
+            .limit(3)
+            .toArray();
+         return res.status(200).json({
+            status: true,
+            message: "Tasks gotten successfully",
+            tasks: {
+              todo,
+              ongoing,
+              completed,
+              totalTodoTasks,
+              totalOngoingTasks,
+              totalCompletedTasks,
+            },
+          });
+        }
+
+        // get ongoing tasks
+        if (taskStatus === "ongoing") {
+          ongoing = await taskCollection
+            .find({ userEmail: userEmail, status: "ongoing" })
+            .limit(parseInt(pageSize))
+            .skip(skip)
+            .toArray();
+          todo = await taskCollection
+            .find({ userEmail: userEmail, status: "todo" })
+            .limit(3)
+            .toArray();
+          completed = await taskCollection
+            .find({ userEmail: userEmail, status: "completed" })
+            .limit(3)
+            .toArray();
+         return res.status(200).json({
+            status: true,
+            message: "Tasks gotten successfully",
+            tasks: {
+              todo,
+              ongoing,
+              completed,
+              totalTodoTasks,
+              totalOngoingTasks,
+              totalCompletedTasks,
+            },
+          });
+        }
+
+        // get completed tasks
+        if (taskStatus === "completed") {
+          completed = await taskCollection
+            .find({ userEmail: userEmail, status: "completed" })
+            .limit(parseInt(pageSize))
+            .skip(skip)
+            .toArray();
+          todo = await taskCollection
+            .find({ userEmail: userEmail, status: "todo" })
+            .limit(3)
+            .toArray();
+          ongoing = await taskCollection
+            .find({ userEmail: userEmail, status: "ongoing" })
+            .limit(3)
+            .toArray();
+           return res.status(200).json({
+              status: true,
+              message: "Tasks gotten successfully",
+              tasks: {
+                todo,
+                ongoing,
+                completed,
+                totalTodoTasks,
+                totalOngoingTasks,
+                totalCompletedTasks,
+              },
+            });
+        }
+
+        // if taskStatus === ''
+        if(taskStatus === 'all'){
+          todo = await taskCollection
+            .find({ userEmail: userEmail, status: "todo" })
+            .limit(3)
+            .toArray();
+            ongoing = await taskCollection
+            .find({ userEmail: userEmail, status: "ongoing" })
+            .limit(3)
+            .toArray();
+            completed = await taskCollection
+            .find({ userEmail: userEmail, status: "completed" })
+            .limit(3)
+            .toArray();
+            res.status(200).json({
+              status: true,
+              message: "Tasks gotten successfully",
+              tasks: {
+                todo,
+                ongoing,
+                completed,
+                totalTodoTasks,
+                totalOngoingTasks,
+                totalCompletedTasks,
+              },
+            });
+        }
+        }
+
       } catch (err) {
         res.status(500).json({
           status: false,
@@ -84,7 +194,7 @@ async function run() {
     });
 
     // put, patch, and delete methods / api end points
-    // update task 
+    // update task
     app.put("/task-quest/update-task/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -111,8 +221,11 @@ async function run() {
     app.patch("/task-quest/update-task-status/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const {status} = req.body;
-        const acknowledge = await taskCollection.updateOne({_id: new ObjectId(id)},{$set:{status:status}})
+        const { status } = req.body;
+        const acknowledge = await taskCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: status } }
+        );
         res.status(201).json({
           status: true,
           message: "Task status updated successfully",
@@ -125,11 +238,13 @@ async function run() {
         });
       }
     });
-    // delete task 
+    // delete task
     app.delete("/task-quest/delete-task/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const acknowledge = await taskCollection.deleteOne({_id: new ObjectId(id)})
+        const acknowledge = await taskCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
         res.status(201).json({
           status: true,
           message: "Task deleted successfully",
@@ -142,9 +257,6 @@ async function run() {
         });
       }
     });
-
-    
-    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
