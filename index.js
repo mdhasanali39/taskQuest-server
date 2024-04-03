@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 // middlewares
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://task-quest-client.vercel.app",],
+    origin: ["http://localhost:5173", "https://task-quest-client.vercel.app"],
     credentials: true,
   })
 );
@@ -66,19 +66,21 @@ async function run() {
         const skip = (parseInt(currentPage) - 1) * parseInt(pageSize);
         let todo, ongoing, completed;
 
-        
         if (taskStatus) {
           console.log(taskStatus);
-          
+
           // lets get total task for todo, ongoing, and completed
           const totalTodoTasks = await taskCollection.countDocuments({
-            status: "todo",userEmail: userEmail
+            status: "todo",
+            userEmail: userEmail,
           });
           const totalOngoingTasks = await taskCollection.countDocuments({
-            status: "ongoing", userEmail: userEmail
+            status: "ongoing",
+            userEmail: userEmail,
           });
           const totalCompletedTasks = await taskCollection.countDocuments({
-            status: "completed",userEmail: userEmail,
+            status: "completed",
+            userEmail: userEmail,
           });
 
           // get todo tasks
@@ -235,23 +237,23 @@ async function run() {
         expiresIn: "1h",
       });
 
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 1);
-
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          maxAge: expirationDate,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
         .json({ status: true });
     });
 
     // delete token
-    app.post("/task-quest/delete-token", (req, res) => {
+    app.get("/task-quest/delete-token", (req, res) => {
       res
-        .clearCookie("token", { maxAge: 0, secure: true, sameSite: "none" })
+        .clearCookie("token", {
+          maxAge: 0,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
         .json({ status: true });
     });
 
