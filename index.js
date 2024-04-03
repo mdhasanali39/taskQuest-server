@@ -249,7 +249,7 @@ async function run() {
     });
 
     // delete token
-    app.get("/task-quest/delete-token", (req, res) => {
+    app.post("/task-quest/delete-token", (req, res) => {
       res
         .clearCookie("token", { maxAge: 0, secure: true, sameSite: "none" })
         .json({ status: true });
