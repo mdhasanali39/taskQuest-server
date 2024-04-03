@@ -9,27 +9,33 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // middlewares
-app.use(cors({
-  origin: ["http://localhost:5173",],
-  credentials:true,
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
 
 // custom middlewares
-const verifyToken = (req,res,next)=>{
-  const token = req.cookies?.token
-  if(!token){
-    return res.status(401).send({status:false,message:"Unauthorized access"})
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res
+      .status(401)
+      .send({ status: false, message: "Unauthorized access" });
   }
-  jwt.verify(token,process.env.SECRET,(err,decode)=>{
-    if(err){
-      return res.status(401).send({status:false,message:"Unauthorized access"})
+  jwt.verify(token, process.env.SECRET, (err, decode) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ status: false, message: "Unauthorized access" });
     }
-    req.user = decode
-    next()
-  })
-}
+    req.user = decode;
+    next();
+  });
+};
 
 // mongodb uri string
 const uri = process.env.MONGODB_URI_STRING;
@@ -59,19 +65,22 @@ async function run() {
         const { pageSize, currentPage, taskStatus } = req.query;
         const skip = (parseInt(currentPage) - 1) * parseInt(pageSize);
         let todo, ongoing, completed;
-        
-        // lets get total task for todo, ongoing, and completed
-        const totalTodoTasks = await taskCollection.countDocuments({
-          status: "todo",
-        });
-        const totalOngoingTasks = await taskCollection.countDocuments({
-          status: "ongoing",
-        });
-        const totalCompletedTasks = await taskCollection.countDocuments({
-          status: "completed",
-        });
 
+        
         if (taskStatus) {
+          console.log(taskStatus);
+          
+          // lets get total task for todo, ongoing, and completed
+          const totalTodoTasks = await taskCollection.countDocuments({
+            status: "todo",userEmail: userEmail
+          });
+          const totalOngoingTasks = await taskCollection.countDocuments({
+            status: "ongoing", userEmail: userEmail
+          });
+          const totalCompletedTasks = await taskCollection.countDocuments({
+            status: "completed",userEmail: userEmail,
+          });
+
           // get todo tasks
           if (taskStatus === "todo") {
             todo = await taskCollection
@@ -82,10 +91,12 @@ async function run() {
             ongoing = await taskCollection
               .find({ userEmail: userEmail, status: "ongoing" })
               .limit(3)
+              .skip(0)
               .toArray();
             completed = await taskCollection
               .find({ userEmail: userEmail, status: "completed" })
               .limit(3)
+              .skip(0)
               .toArray();
             return res.status(200).json({
               status: true,
@@ -111,10 +122,12 @@ async function run() {
             todo = await taskCollection
               .find({ userEmail: userEmail, status: "todo" })
               .limit(3)
+              .skip(0)
               .toArray();
             completed = await taskCollection
               .find({ userEmail: userEmail, status: "completed" })
               .limit(3)
+              .skip(0)
               .toArray();
             return res.status(200).json({
               status: true,
@@ -140,10 +153,12 @@ async function run() {
             todo = await taskCollection
               .find({ userEmail: userEmail, status: "todo" })
               .limit(3)
+              .skip(0)
               .toArray();
             ongoing = await taskCollection
               .find({ userEmail: userEmail, status: "ongoing" })
               .limit(3)
+              .skip(0)
               .toArray();
             return res.status(200).json({
               status: true,
@@ -265,26 +280,30 @@ async function run() {
     });
 
     // update task status
-    app.patch("/task-quest/update-task-status/:id", verifyToken, async (req, res) => {
-      try {
-        const id = req.params.id;
-        const { status } = req.body;
-        const acknowledge = await taskCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status: status } }
-        );
-        res.status(201).json({
-          status: true,
-          message: "Task status updated successfully",
-          acknowledge,
-        });
-      } catch (err) {
-        res.status(500).json({
-          status: false,
-          message: `Internal server error ${err.message}`,
-        });
+    app.patch(
+      "/task-quest/update-task-status/:id",
+      verifyToken,
+      async (req, res) => {
+        try {
+          const id = req.params.id;
+          const { status } = req.body;
+          const acknowledge = await taskCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status: status } }
+          );
+          res.status(201).json({
+            status: true,
+            message: "Task status updated successfully",
+            acknowledge,
+          });
+        } catch (err) {
+          res.status(500).json({
+            status: false,
+            message: `Internal server error ${err.message}`,
+          });
+        }
       }
-    });
+    );
     // delete task
     app.delete("/task-quest/delete-task/:id", verifyToken, async (req, res) => {
       try {
